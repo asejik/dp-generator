@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Loader2, Plus, Trash2, Sparkles, ArrowRight } from 'lucide-react';
+import { Loader2, Plus, Sparkles, ArrowRight } from 'lucide-react'; // Removed Trash2
 import { type CampaignConfig } from '../types';
-import { deleteCampaign } from '../lib/campaignService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GlassCard } from '../components/ui/GlassCard';
 import { GlowButton } from '../components/ui/GlowButton';
@@ -31,25 +30,14 @@ export const Home = () => {
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
-    e.preventDefault();
-    if (!window.confirm("Are you sure?")) return;
-    const password = prompt("Admin Password:");
-    if (password !== "1234") return alert("Wrong password!");
-    try {
-      await deleteCampaign(id);
-      setCampaigns(prev => prev.filter(c => c.id !== id));
-    } catch (error) {
-      alert("Error deleting");
-    }
-  };
+  // Removed handleDelete function entirely
 
   if (loading) return <div className="min-h-screen aurora-bg flex items-center justify-center"><Loader2 className="animate-spin text-gray-600" /></div>;
 
   return (
     <div className="min-h-screen aurora-bg text-gray-900 pb-20">
 
-      {/* 1. Hero Section (Big Contrast) */}
+      {/* 1. Hero Section */}
       <div className="relative pt-20 pb-16 px-6 text-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -75,7 +63,7 @@ export const Home = () => {
         </motion.div>
       </div>
 
-      {/* 2. Grid with Staggered Reveal */}
+      {/* 2. Grid */}
       <div className="max-w-6xl mx-auto px-6">
         {campaigns.length === 0 ? (
            <GlassCard className="p-12 text-center">
@@ -91,18 +79,10 @@ export const Home = () => {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.1 }}
-                  whileHover={{ y: -8 }} // Card Lift
+                  whileHover={{ y: -8 }}
                 >
                   <Link to={`/c/${campaign.id}`} className="block group relative">
                     <GlassCard className="overflow-hidden h-full border-0 ring-1 ring-gray-900/5 transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-blue-900/20">
-
-                      {/* Delete Trigger */}
-                      <button
-                        onClick={(e) => handleDelete(e, campaign.id)}
-                        className="absolute top-3 right-3 z-20 p-2 bg-white/80 backdrop-blur rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 scale-90 group-hover:scale-100"
-                      >
-                        <Trash2 size={16} />
-                      </button>
 
                       {/* Image */}
                       <div className="aspect-[4/3] w-full overflow-hidden bg-gray-100 relative">
