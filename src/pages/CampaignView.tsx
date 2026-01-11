@@ -4,10 +4,11 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { DPCanvas } from '../components/DPCanvas';
 import { type CampaignConfig } from '../types';
-import { Loader2, Download, Upload, Type, Share2, Info, ArrowLeft, Image as ImageIcon } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Loader2, Download, Upload, Type, Share2, ArrowLeft, Image as ImageIcon } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { GlassCard } from '../components/ui/GlassCard';
 import { GlowButton } from '../components/ui/GlowButton';
+import { ImageCropper } from '../components/ImageCropper'; // Import the new component
 
 export const CampaignView = () => {
   const { id } = useParams();
@@ -20,6 +21,10 @@ export const CampaignView = () => {
 
   const [userName, setUserName] = useState("");
   const [userImage, setUserImage] = useState<string | null>(null);
+
+  // Cropper State
+  const [rawImage, setRawImage] = useState<string | null>(null);
+  const [showCropper, setShowCropper] = useState(false);
 
   useEffect(() => {
     const fetchCampaign = async () => {
@@ -34,11 +39,22 @@ export const CampaignView = () => {
     fetchCampaign();
   }, [id]);
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setUserImage(URL.createObjectURL(file));
+    if (file) {
+      setRawImage(URL.createObjectURL(file));
+      setShowCropper(true); // Open the modal
+      e.target.value = ''; // Reset input so same file can be selected again
+    }
   };
 
+  const handleCropComplete = (croppedImgUrl: string) => {
+    setUserImage(croppedImgUrl);
+    setShowCropper(false);
+    setRawImage(null);
+  };
+
+  // ... (keep getCanvasBlob, handleDownload, handleShare functions exactly as they were) ...
   const getCanvasBlob = async (): Promise<Blob | null> => {
     if (!stageRef.current) return null;
     return new Promise((resolve) => stageRef.current.toBlob((blob: Blob) => resolve(blob), 'image/png', 1));
@@ -81,20 +97,29 @@ export const CampaignView = () => {
   return (
     <div className="min-h-screen aurora-bg py-8 px-4 flex flex-col items-center">
 
-      {/* Navbar / Back */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-lg mb-6 flex items-center justify-between"
-      >
+      {/* CROPPER MODAL */}
+      <AnimatePresence>
+        {showCropper && rawImage && (
+          <ImageCropper
+            imageSrc={rawImage}
+            aspect={campaign.frame.width / campaign.frame.height} // Force Aspect Ratio
+            shape={campaign.frame.shape}
+            onCropComplete={handleCropComplete}
+            onCancel={() => {
+              setShowCropper(false);
+              setRawImage(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-lg mb-6 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition bg-white/40 px-3 py-1.5 rounded-full backdrop-blur-sm">
           <ArrowLeft size={16} /> Back to Gallery
         </Link>
       </motion.div>
 
-      {/* Main Glass Card */}
       <GlassCard className="w-full max-w-lg overflow-hidden relative">
-        {/* Subtle decorative gradient glow behind content */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-blue-400/20 blur-3xl -z-10" />
 
         <div className="p-8">
@@ -103,7 +128,6 @@ export const CampaignView = () => {
             <p className="text-gray-500 text-sm mt-1">Customize and download your design</p>
           </div>
 
-          {/* Canvas Wrapper */}
           <div className="mb-8 flex justify-center perspective-1000">
             <motion.div
               initial={{ rotateX: 10, opacity: 0 }}
@@ -111,24 +135,16 @@ export const CampaignView = () => {
               transition={{ duration: 0.7, type: "spring" }}
               className="rounded-xl overflow-hidden shadow-2xl ring-4 ring-white/50"
             >
-              <DPCanvas
-                ref={stageRef}
-                config={campaign}
-                userImageSrc={userImage || undefined}
-                userName={userName}
-              />
+              <DPCanvas ref={stageRef} config={campaign} userImageSrc={userImage || undefined} userName={userName} />
             </motion.div>
           </div>
 
-          {/* Controls */}
           <div className="space-y-5">
             {campaign.text && (
               <div className="group">
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block ml-1">Your Name</label>
                 <div className="relative overflow-hidden rounded-xl bg-gray-50/50 border border-gray-200 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all duration-300">
-                  <div className="absolute left-4 top-3.5 text-gray-400">
-                    <Type size={18} />
-                  </div>
+                  <div className="absolute left-4 top-3.5 text-gray-400"><Type size={18} /></div>
                   <input
                     type="text"
                     value={userName}
@@ -147,7 +163,7 @@ export const CampaignView = () => {
                   {userImage ? (
                     <div className="flex items-center gap-2 text-green-600 font-medium">
                       <ImageIcon size={20} />
-                      <span>Photo Selected</span>
+                      <span>Click to Change Photo</span>
                     </div>
                   ) : (
                     <>
@@ -156,38 +172,19 @@ export const CampaignView = () => {
                     </>
                   )}
                 </div>
-                <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+                {/* Fixed: Use handlePhotoSelect instead of handlePhotoUpload */}
+                <input type="file" className="hidden" accept="image/*" onChange={handlePhotoSelect} />
               </label>
             </div>
 
-            {userImage && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="flex justify-center">
-                 <div className="inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wide text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                    <Info size={12} /> Pinch to zoom & drag
-                 </div>
-              </motion.div>
-            )}
+            {/* Removed the "Pinch to zoom" hint as requested */}
 
             <div className="flex gap-3 pt-2">
-              <GlowButton
-                onClick={handleDownload}
-                disabled={isDownloadDisabled}
-                isLoading={isGenerating && actionType === 'download'}
-                icon={<Download size={18} />}
-                className="flex-1"
-              >
+              <GlowButton onClick={handleDownload} disabled={isDownloadDisabled} isLoading={isGenerating && actionType === 'download'} icon={<Download size={18} />} className="flex-1">
                 Download
               </GlowButton>
-
               {showShare && (
-                <GlowButton
-                  onClick={handleShare}
-                  disabled={isDownloadDisabled}
-                  variant="secondary"
-                  isLoading={isGenerating && actionType === 'share'}
-                  icon={<Share2 size={18} />}
-                  className="flex-1"
-                >
+                <GlowButton onClick={handleShare} disabled={isDownloadDisabled} variant="secondary" isLoading={isGenerating && actionType === 'share'} icon={<Share2 size={18} />} className="flex-1">
                   Share
                 </GlowButton>
               )}

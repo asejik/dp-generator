@@ -23,16 +23,15 @@ const URLImage = ({ src, x, y, width, height, opacity = 1 }: any) => {
   );
 };
 
-// CHANGED: Wrapped in forwardRef so the parent can access the Stage
 export const DPCanvas = forwardRef<any, DPCanvasProps>(({ config, userImageSrc, userName }, ref) => {
   const CANVAS_SIZE = 1080;
   const scale = window.innerWidth < 500 ? 0.3 : 0.4;
 
   const UserPhotoLayer = () => {
     if (!userImageSrc) return null;
-
     const [img] = useImage(userImageSrc, 'anonymous');
 
+    // Logic Fix: Since image is pre-cropped, we fit it exactly to frame dimensions
     return (
       <Group
         clipFunc={(ctx) => {
@@ -56,6 +55,7 @@ export const DPCanvas = forwardRef<any, DPCanvasProps>(({ config, userImageSrc, 
           y={config.frame.y}
           width={config.frame.width}
           height={config.frame.height}
+          // The cropper ensures aspect ratio matches, so we can force dimensions here safely
         />
       </Group>
     );
@@ -64,7 +64,7 @@ export const DPCanvas = forwardRef<any, DPCanvasProps>(({ config, userImageSrc, 
   return (
     <div className="flex justify-center border border-gray-200 shadow-lg rounded-lg overflow-hidden bg-white">
       <Stage
-        ref={ref} // CHANGED: Connected the Ref here
+        ref={ref}
         width={CANVAS_SIZE * scale}
         height={CANVAS_SIZE * scale}
         scaleX={scale}
