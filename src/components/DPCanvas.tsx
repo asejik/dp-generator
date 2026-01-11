@@ -67,6 +67,7 @@ export const DPCanvas: React.FC<DPCanvasProps> = ({ config, userImageSrc, userNa
             y={0}
             width={CANVAS_SIZE}
             height={CANVAS_SIZE}
+            opacity={0.5}
           />
 
           {/* 3. USER NAME (Top Layer) */}
