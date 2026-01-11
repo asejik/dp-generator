@@ -3,6 +3,7 @@ import { Routes, Route, Link } from 'react-router-dom';
 import { AdminBuilder } from './pages/AdminBuilder';
 import { DPCanvas } from './components/DPCanvas';
 import { type CampaignConfig } from './types';
+import { CampaignView } from './pages/CampaignView';
 
 // ... (Keep your mockCampaign definition here) ...
 const mockCampaign: CampaignConfig = {
@@ -36,6 +37,7 @@ function App() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/admin" element={<AdminBuilder />} />
+      <Route path="/c/:id" element={<CampaignView />} />
     </Routes>
   );
 }
