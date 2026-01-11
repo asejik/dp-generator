@@ -1,5 +1,5 @@
 import React from 'react';
-import { Stage, Layer, Image as KonvaImage, Text } from 'react-konva';
+import { Stage, Layer, Image as KonvaImage, Text, Rect } from 'react-konva';
 import useImage from 'use-image';
 import { type CampaignConfig } from '../types';
 
@@ -40,6 +40,14 @@ export const DPCanvas: React.FC<DPCanvasProps> = ({ config, userImageSrc, userNa
         scaleY={scale}
       >
         <Layer>
+            {/* 0. SOLID BACKGROUND (Safety Layer) */}
+            <Rect
+                x={0}
+                y={0}
+                width={CANVAS_SIZE}
+                height={CANVAS_SIZE}
+                fill="#ffffff"
+            />
           {/* 1. USER PHOTO (Bottom Layer) */}
           {userImageSrc && (
             <URLImage

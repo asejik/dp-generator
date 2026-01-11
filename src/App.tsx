@@ -6,18 +6,19 @@ function App() {
   const mockCampaign: CampaignConfig = {
     id: "test-campaign",
     title: "Test Event 2026",
-    // This is a sample PNG I hosted that has a transparent hole in the middle
-    baseImageUrl: "https://i.imgur.com/492Zq9a.png",
+    // CHANGED: Using a reliable placeholder service (Gray background with text)
+    baseImageUrl: "https://placehold.co/1080x1080/808080/FFFFFF.png?text=Church+Flyer+Frame&font=roboto",
     frame: {
-      x: 340,    // Adjusted for the sample image hole
+      x: 340,
       y: 340,
       width: 400,
       height: 400,
     },
     text: {
-      x: 0, // Centered
+      x: 0,
       y: 850,
-      color: "#FFFFFF",
+      // CHANGED: Black color to ensure visibility
+      color: "#000000",
       fontSize: 60,
       fontFamily: "Arial",
       align: "center",
