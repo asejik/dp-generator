@@ -4,13 +4,17 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { DPCanvas } from '../components/DPCanvas';
 import { type CampaignConfig } from '../types';
-import { Loader2, Download, Upload, Type } from 'lucide-react';
+import { Loader2, Download, Upload, Type, Share2, Info } from 'lucide-react';
 
 export const CampaignView = () => {
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
   const [campaign, setCampaign] = useState<CampaignConfig | null>(null);
-  const stageRef = useRef<any>(null); // CHANGED: Reference to the canvas
+  const stageRef = useRef<any>(null);
+
+  // Generation States
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [actionType, setActionType] = useState<'download' | 'share' | null>(null);
 
   const [userName, setUserName] = useState("");
   const [userImage, setUserImage] = useState<string | null>(null);
@@ -42,30 +46,71 @@ export const CampaignView = () => {
     }
   };
 
-  // CHANGED: The Download Function
-  const handleDownload = () => {
+  // Helper to get Blob from Canvas
+  const getCanvasBlob = async (): Promise<Blob | null> => {
+    if (!stageRef.current) return null;
+    return new Promise((resolve) => {
+      stageRef.current.toBlob((blob: Blob) => {
+        resolve(blob);
+      }, 'image/png', 1); // 1 = High Quality
+    });
+  };
+
+  const handleDownload = async () => {
+    if (!stageRef.current) return;
+    setIsGenerating(true);
+    setActionType('download');
+
+    // Small delay to allow UI to show spinner before heavy canvas work
+    setTimeout(async () => {
+      const uri = stageRef.current.toDataURL({ pixelRatio: 3 });
+      const link = document.createElement('a');
+      link.download = `my-dp-${Date.now()}.png`;
+      link.href = uri;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setIsGenerating(false);
+      setActionType(null);
+    }, 100);
+  };
+
+  const handleShare = async () => {
     if (!stageRef.current) return;
 
-    // 1. Get the URI from the canvas (High quality 3x pixel ratio)
-    const uri = stageRef.current.toDataURL({ pixelRatio: 3 });
+    // Check if sharing is supported
+    if (!navigator.share) {
+      alert("Sharing is not supported on this browser. Please use Download.");
+      return;
+    }
 
-    // 2. Create a fake link and click it to trigger download
-    const link = document.createElement('a');
-    link.download = `my-dp-${Date.now()}.png`;
-    link.href = uri;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    setIsGenerating(true);
+    setActionType('share');
+
+    try {
+      const blob = await getCanvasBlob();
+      if (blob) {
+        const file = new File([blob], "my-dp.png", { type: "image/png" });
+        await navigator.share({
+          files: [file],
+          title: campaign?.title || 'My New DP',
+          text: `Got my DP for ${campaign?.title}!`,
+        });
+      }
+    } catch (error) {
+      console.log("Share cancelled or failed", error);
+    } finally {
+      setIsGenerating(false);
+      setActionType(null);
+    }
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
   if (!campaign) return <div className="text-center mt-20">Campaign not found.</div>;
 
-  // CHANGED: Intelligent Disabled Logic
-  // Button is disabled IF:
-  // 1. No photo is uploaded OR
-  // 2. The campaign requires text (campaign.text exists) AND the user hasn't typed a name.
-  const isDownloadDisabled = !userImage || (!!campaign.text && !userName);
+  const isDownloadDisabled = !userImage || (!!campaign.text && !userName) || isGenerating;
+  const showShare = typeof navigator !== 'undefined' && !!navigator.share && /mobile/i.test(navigator.userAgent);
 
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4">
@@ -73,18 +118,26 @@ export const CampaignView = () => {
         <h1 className="text-2xl font-bold text-center text-gray-800 mb-2">{campaign.title}</h1>
         <p className="text-center text-gray-500 mb-6 text-sm">Create your personalized DP</p>
 
-        <div className="mb-6 flex justify-center">
+        {/* Canvas Area */}
+        <div className="mb-2 flex justify-center">
           <DPCanvas
-            ref={stageRef} // CHANGED: Attach the ref here
+            ref={stageRef}
             config={campaign}
             userImageSrc={userImage || undefined}
             userName={userName}
           />
         </div>
 
+        {/* Mobile Polish: Instruction Hint */}
+        {userImage && (
+            <div className="flex items-center justify-center gap-2 text-xs text-blue-600 bg-blue-50 py-2 rounded mb-6">
+                <Info size={14} />
+                <span>Tip: Pinch to zoom or drag to adjust your photo</span>
+            </div>
+        )}
+
         <div className="space-y-4">
 
-          {/* CHANGED: Only show Name Input if campaign.text exists */}
           {campaign.text && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
@@ -112,14 +165,41 @@ export const CampaignView = () => {
             </label>
           </div>
 
-          <button
-            onClick={handleDownload}
-            disabled={isDownloadDisabled}
-            className="w-full flex items-center justify-center bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download className="w-5 h-5 mr-2" />
-            Download DP
-          </button>
+          <div className="flex gap-3">
+             {/* Download Button */}
+            <button
+                onClick={handleDownload}
+                disabled={isDownloadDisabled}
+                className="flex-1 flex items-center justify-center bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                {isGenerating && actionType === 'download' ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                    <>
+                        <Download className="w-5 h-5 mr-2" />
+                        Download
+                    </>
+                )}
+            </button>
+
+            {/* Share Button (Only shows on supported devices/browsers) */}
+            {showShare && (
+                <button
+                    onClick={handleShare}
+                    disabled={isDownloadDisabled}
+                    className="flex-1 flex items-center justify-center bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {isGenerating && actionType === 'share' ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                        <>
+                            <Share2 className="w-5 h-5 mr-2" />
+                            Share
+                        </>
+                    )}
+                </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

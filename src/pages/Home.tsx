@@ -1,36 +1,52 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { type CampaignConfig } from '../types';
+import { deleteCampaign } from '../lib/campaignService';
 
 export const Home = () => {
   const [campaigns, setCampaigns] = useState<CampaignConfig[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchCampaigns = async () => {
-      try {
-        // Fetch campaigns, sorted by newest first
-        const q = query(collection(db, "dp_campaigns"), orderBy("createdAt", "desc"), limit(20));
-        const querySnapshot = await getDocs(q);
-
-        const list: CampaignConfig[] = [];
-        querySnapshot.forEach((doc) => {
-          list.push({ id: doc.id, ...doc.data() } as CampaignConfig);
-        });
-
-        setCampaigns(list);
-      } catch (error) {
-        console.error("Error fetching campaigns:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchCampaigns();
   }, []);
+
+  const fetchCampaigns = async () => {
+    try {
+      const q = query(collection(db, "dp_campaigns"), orderBy("createdAt", "desc"), limit(20));
+      const querySnapshot = await getDocs(q);
+
+      const list: CampaignConfig[] = [];
+      querySnapshot.forEach((doc) => {
+        list.push({ id: doc.id, ...doc.data() } as CampaignConfig);
+      });
+
+      setCampaigns(list);
+    } catch (error) {
+      console.error("Error fetching campaigns:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault(); // Prevent clicking the link
+    if (!window.confirm("Are you sure you want to delete this campaign?")) return;
+
+    const password = prompt("Enter Admin Password to confirm delete:");
+    if (password !== "1234") return alert("Wrong password!");
+
+    try {
+      await deleteCampaign(id);
+      // Remove from UI instantly
+      setCampaigns(prev => prev.filter(c => c.id !== id));
+    } catch (error) {
+      alert("Error deleting campaign");
+    }
+  };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" /></div>;
 
@@ -65,9 +81,18 @@ export const Home = () => {
               <Link
                 key={campaign.id}
                 to={`/c/${campaign.id}`}
-                className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition hover:border-blue-300 block"
+                className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition hover:border-blue-300 block relative"
               >
-                {/* Image Preview (Cropped) */}
+                {/* Delete Button (Absolute Position) */}
+                <button
+                  onClick={(e) => handleDelete(e, campaign.id)}
+                  className="absolute top-2 right-2 z-10 p-2 bg-white/90 text-red-600 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                  title="Delete Campaign"
+                >
+                  <Trash2 size={16} />
+                </button>
+
+                {/* Image Preview */}
                 <div className="aspect-video w-full overflow-hidden bg-gray-100 relative">
                   <img
                     src={campaign.baseImageUrl}
@@ -77,9 +102,8 @@ export const Home = () => {
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition" />
                 </div>
 
-                {/* Details */}
                 <div className="p-4">
-                  <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition">{campaign.title}</h3>
+                  <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition truncate">{campaign.title}</h3>
                   <p className="text-xs text-gray-400 mt-1">Tap to generate &rarr;</p>
                 </div>
               </Link>

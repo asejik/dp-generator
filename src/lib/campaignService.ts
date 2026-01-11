@@ -1,5 +1,5 @@
 import { db, storage } from "./firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, deleteDoc, doc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // 1. Upload the Flyer Image to Storage
@@ -43,4 +43,8 @@ export const createCampaign = async (
 
   const docRef = await addDoc(collection(db, "dp_campaigns"), newCampaign);
   return docRef.id;
+};
+
+export const deleteCampaign = async (id: string): Promise<void> => {
+  await deleteDoc(doc(db, "dp_campaigns", id));
 };
