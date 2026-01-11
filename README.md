@@ -1,73 +1,86 @@
-# React + TypeScript + Vite
+# DP Banner Generator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, self-hosted platform that allows organizations to create viral "Get DP" campaigns. Admins upload designs and define layout rules; users upload their photos to generate branded images instantly.
 
-Currently, two official plugins are available:
+![App Preview](https://placehold.co/800x400/1e293b/ffffff?text=DP+Generator+Preview)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## ✨ Features
 
-## React Compiler
+- **Admin Builder:** Visual drag-and-drop editor to define where user photos and names appear on the flyer.
+- **Client-Side Generation:** Zero server cost for image processing. Everything happens in the user's browser using HTML5 Canvas.
+- **Privacy Focused:** User photos are processed locally and never stored on the server.
+- **Mobile First:** Touch-friendly interface with pinch-to-zoom and drag support.
+- **Modern UI:** Glassmorphism design system using Tailwind CSS v4 and Framer Motion.
+- **Instant Sharing:** Native mobile share sheet integration (Web Share API).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🛠️ Tech Stack
 
-## Expanding the ESLint configuration
+- **Frontend:** React 19, TypeScript, Vite
+- **Styling:** Tailwind CSS v4
+- **Animations:** Framer Motion
+- **Graphics Engine:** Konva.js / React-Konva
+- **Backend/Storage:** Firebase (Firestore & Storage)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🚀 Getting Started
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Prerequisites
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- Node.js (v18 or higher)
+- A Firebase Project
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone [https://github.com/YOUR_USERNAME/dp-generator.git](https://github.com/YOUR_USERNAME/dp-generator.git)
+   cd dp-generator
+
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. **Install dependencies**
+```bash
+npm install
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+
+
+3. **Configure Environment**
+Create a `.env` file in the root directory and add your Firebase keys:
+```env
+VITE_FIREBASE_API_KEY=your_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_bucket.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+
+```
+
+
+4. **Run Development Server**
+```bash
+npm run dev
+
+```
+
+
+
+## 📦 Deployment (Vercel)
+
+1. Push your code to GitHub.
+2. Import the project into Vercel.
+3. **Critical:** In Vercel Project Settings > Environment Variables, copy and paste all the keys from your `.env` file.
+4. Deploy!
+
+## 🛡️ Security
+
+* **Storage Rules:** Configured to allow public read/write only to the `campaign_flyers` folder.
+* **Firestore Rules:** Configured to segregate campaign data.
+
+```
+
+**Save the file and commit it:**
+```bash
+git add README.md
+git commit -m "docs: add project documentation"
+git push
