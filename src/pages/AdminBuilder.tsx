@@ -1,19 +1,18 @@
 import React, { useState } from 'react';
-import { Upload, Save, Loader2 } from 'lucide-react';
+import { Upload, Save, Loader2, Copy, Check, ArrowLeft } from 'lucide-react';
 import { AdminCanvas } from '../components/AdminCanvas';
 import { uploadCampaignImage, createCampaign } from '../lib/campaignService';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 export const AdminBuilder = () => {
-  const navigate = useNavigate();
-
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
-  // New State: Name Toggle
   const [includeName, setIncludeName] = useState(true);
 
-  // We only store the "Result" config here that comes from the canvas
+  // State for the "Success Screen"
+  const [generatedId, setGeneratedId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
   const [finalConfig, setFinalConfig] = useState<{
     frame: { x: number; y: number; width: number; height: number; shape: 'rect' | 'circle' };
     text: { x: number; y: number } | null;
@@ -27,6 +26,8 @@ export const AdminBuilder = () => {
     if (selectedFile) {
       setFile(selectedFile);
       setPreviewUrl(URL.createObjectURL(selectedFile));
+      // Reset success state if they upload a new image
+      setGeneratedId(null);
     }
   };
 
@@ -38,17 +39,12 @@ export const AdminBuilder = () => {
 
     try {
       setIsUploading(true);
-
       const imageUrl = await uploadCampaignImage(file);
+      const campaignId = await createCampaign(title, imageUrl, finalConfig);
 
-      // Pass the data exactly as the Service expects it
-      // Note: The service will handle the null text check
-      await createCampaign(title, imageUrl, finalConfig);
-
-      alert("Campaign Created Successfully!");
+      // SHOW SUCCESS STATE
+      setGeneratedId(campaignId);
       setIsUploading(false);
-
-      navigate('/');
 
     } catch (error) {
       console.error(error);
@@ -57,13 +53,73 @@ export const AdminBuilder = () => {
     }
   };
 
+  const copyLink = () => {
+    const url = `${window.location.origin}/c/${generatedId}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // ---------------------------------------------------------
+  // RENDER: SUCCESS SCREEN
+  // ---------------------------------------------------------
+  if (generatedId) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-xl shadow-lg max-w-lg w-full text-center">
+          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Check size={32} />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Campaign Live!</h2>
+          <p className="text-gray-500 mb-6">Your DP campaign is ready. Share this link with your members.</p>
+
+          <div className="flex items-center gap-2 bg-gray-100 p-3 rounded-lg mb-6 border border-gray-200">
+            <code className="text-sm text-gray-600 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+              {window.location.origin}/c/{generatedId}
+            </code>
+            <button
+              onClick={copyLink}
+              className="p-2 bg-white rounded shadow-sm hover:bg-gray-50 text-gray-700"
+              title="Copy Link"
+            >
+              {copied ? <Check size={18} className="text-green-600"/> : <Copy size={18} />}
+            </button>
+          </div>
+
+          <div className="flex gap-3 justify-center">
+            <Link
+              to={`/c/${generatedId}`}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+            >
+              Test it Now
+            </Link>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+            >
+              Create Another
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------
+  // RENDER: BUILDER SCREEN
+  // ---------------------------------------------------------
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
         <header className="mb-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Campaign Builder</h1>
-            <p className="text-gray-500">Upload a flyer, choose a shape, and position the text.</p>
+          <div className="flex items-center gap-4">
+             <Link to="/" className="p-2 bg-white rounded-full border hover:bg-gray-50">
+               <ArrowLeft size={20} />
+             </Link>
+             <div>
+                <h1 className="text-3xl font-bold text-gray-900">Campaign Builder</h1>
+                <p className="text-gray-500">Upload a flyer, choose a shape, and position the text.</p>
+             </div>
           </div>
 
           {previewUrl && (
@@ -92,7 +148,7 @@ export const AdminBuilder = () => {
             </div>
 
             <div className="flex items-end pb-2">
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className="flex items-center gap-3 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={includeName}
