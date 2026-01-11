@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Loader2, Plus, Sparkles, ArrowRight } from 'lucide-react'; // Removed Trash2
+import { Loader2, Sparkles, ArrowRight, Lock } from 'lucide-react'; // Added Lock
 import { type CampaignConfig } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GlassCard } from '../components/ui/GlassCard';
-import { GlowButton } from '../components/ui/GlowButton';
+// Removed GlowButton and Plus from import since we don't use them in Hero anymore
 
 export const Home = () => {
   const [campaigns, setCampaigns] = useState<CampaignConfig[]>([]);
@@ -30,12 +30,10 @@ export const Home = () => {
     }
   };
 
-  // Removed handleDelete function entirely
-
   if (loading) return <div className="min-h-screen aurora-bg flex items-center justify-center"><Loader2 className="animate-spin text-gray-600" /></div>;
 
   return (
-    <div className="min-h-screen aurora-bg text-gray-900 pb-20">
+    <div className="min-h-screen aurora-bg text-gray-900 pb-20 flex flex-col">
 
       {/* 1. Hero Section */}
       <div className="relative pt-20 pb-16 px-6 text-center">
@@ -55,16 +53,12 @@ export const Home = () => {
             Select a campaign below to generate your personalized design instantly. High quality, ready for social sharing.
           </p>
 
-          <Link to="/admin">
-            <GlowButton variant="secondary" icon={<Plus size={16} />}>
-              Admin Dashboard
-            </GlowButton>
-          </Link>
+          {/* Removed Big Admin Button from here */}
         </motion.div>
       </div>
 
       {/* 2. Grid */}
-      <div className="max-w-6xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6 flex-1">
         {campaigns.length === 0 ? (
            <GlassCard className="p-12 text-center">
               <p className="text-gray-400">No active campaigns.</p>
@@ -84,7 +78,6 @@ export const Home = () => {
                   <Link to={`/c/${campaign.id}`} className="block group relative">
                     <GlassCard className="overflow-hidden h-full border-0 ring-1 ring-gray-900/5 transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-blue-900/20">
 
-                      {/* Image */}
                       <div className="aspect-[4/3] w-full overflow-hidden bg-gray-100 relative">
                         <img
                           src={campaign.baseImageUrl}
@@ -93,7 +86,6 @@ export const Home = () => {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
 
-                        {/* Title Overlay */}
                         <div className="absolute bottom-0 left-0 p-6 text-white">
                           <h3 className="text-xl font-display font-bold leading-tight mb-1">{campaign.title}</h3>
                           <div className="flex items-center gap-2 text-sm font-medium text-white/80 opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
@@ -109,6 +101,13 @@ export const Home = () => {
           </div>
         )}
       </div>
+
+      {/* 3. Footer with Hidden Admin Link */}
+      <footer className="mt-20 py-8 text-center opacity-30 hover:opacity-100 transition-opacity">
+        <Link to="/admin" className="p-2 inline-block text-gray-500 hover:text-blue-600 transition-colors">
+          <Lock size={16} />
+        </Link>
+      </footer>
     </div>
   );
 };
