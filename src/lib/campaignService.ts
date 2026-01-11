@@ -16,32 +16,31 @@ export const uploadCampaignImage = async (file: File): Promise<string> => {
 export const createCampaign = async (
   title: string,
   imageUrl: string,
-  frameConfig: any
+  config: {
+    frame: any,
+    text: { x: number; y: number } | null
+  }
 ): Promise<string> => {
 
-  // Create a clean "Campaign Object"
   const newCampaign = {
     title: title,
     baseImageUrl: imageUrl,
-    frame: {
-      x: frameConfig.x,
-      y: frameConfig.y,
-      width: frameConfig.width,
-      height: frameConfig.height,
-    },
-    // Default text settings (we can make these editable later)
-    text: {
-      x: 0,
-      y: frameConfig.y + frameConfig.height + 50, // Auto-place text below photo
-      color: "#000000",
-      fontSize: 60,
-      fontFamily: "Arial",
-      align: "center"
-    },
+    frame: config.frame,
+    // If text is null, don't save a text config at all
+    ...(config.text && {
+      text: {
+        x: config.text.x,
+        y: config.text.y,
+        color: "#000000",
+        fontSize: 60,
+        fontFamily: "Arial",
+        align: "center"
+      }
+    }),
     createdAt: serverTimestamp(),
     isActive: true
   };
 
   const docRef = await addDoc(collection(db, "dp_campaigns"), newCampaign);
-  return docRef.id; // Return the new ID (e.g., "7d9f8g7df8g")
+  return docRef.id;
 };

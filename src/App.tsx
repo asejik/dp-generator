@@ -1,16 +1,21 @@
-// src/App.tsx
 import { Routes, Route, Link } from 'react-router-dom';
 import { AdminBuilder } from './pages/AdminBuilder';
+import { CampaignView } from './pages/CampaignView';
 import { DPCanvas } from './components/DPCanvas';
 import { type CampaignConfig } from './types';
-import { CampaignView } from './pages/CampaignView';
 
-// ... (Keep your mockCampaign definition here) ...
+// Updated mock data with 'shape'
 const mockCampaign: CampaignConfig = {
     id: "test-campaign",
     title: "Test Event 2026",
     baseImageUrl: "https://placehold.co/1080x1080/808080/FFFFFF.png?text=Church+Flyer+Frame&font=roboto",
-    frame: { x: 340, y: 340, width: 400, height: 400 },
+    frame: {
+      x: 340,
+      y: 340,
+      width: 400,
+      height: 400,
+      shape: 'rect' // <--- Added this line to fix the error
+    },
     text: { x: 0, y: 850, color: "#000000", fontSize: 60, fontFamily: "Arial", align: "center" }
 };
 

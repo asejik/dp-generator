@@ -1,16 +1,16 @@
-import React from 'react';
-import { Stage, Layer, Image as KonvaImage, Text, Rect } from 'react-konva';
+import { forwardRef } from 'react';
+import { Stage, Layer, Image as KonvaImage, Text, Rect, Group } from 'react-konva';
 import useImage from 'use-image';
 import { type CampaignConfig } from '../types';
 
 interface DPCanvasProps {
   config: CampaignConfig;
-  userImageSrc?: string; // The user's uploaded selfie (optional for now)
-  userName: string;      // The name they typed
+  userImageSrc?: string;
+  userName: string;
 }
 
 const URLImage = ({ src, x, y, width, height, opacity = 1 }: any) => {
-  const [img] = useImage(src, 'anonymous'); // 'anonymous' fixes CORS issues
+  const [img] = useImage(src, 'anonymous');
   return (
     <KonvaImage
       image={img}
@@ -23,66 +23,76 @@ const URLImage = ({ src, x, y, width, height, opacity = 1 }: any) => {
   );
 };
 
-export const DPCanvas: React.FC<DPCanvasProps> = ({ config, userImageSrc, userName }) => {
-  // Standard canvas size (square for social media)
+// CHANGED: Wrapped in forwardRef so the parent can access the Stage
+export const DPCanvas = forwardRef<any, DPCanvasProps>(({ config, userImageSrc, userName }, ref) => {
   const CANVAS_SIZE = 1080;
+  const scale = window.innerWidth < 500 ? 0.3 : 0.4;
 
-  // Calculate scale to fit screen if needed (responsive)
-  // For now, we hardcode a view scale, but we'll make this responsive later
-  const scale = window.innerWidth < 500 ? 0.3 : 0.5;
+  const UserPhotoLayer = () => {
+    if (!userImageSrc) return null;
+
+    const [img] = useImage(userImageSrc, 'anonymous');
+
+    return (
+      <Group
+        clipFunc={(ctx) => {
+          if (config.frame.shape === 'circle') {
+            ctx.arc(
+              config.frame.x + config.frame.width / 2,
+              config.frame.y + config.frame.height / 2,
+              config.frame.width / 2,
+              0,
+              Math.PI * 2,
+              false
+            );
+          } else {
+            ctx.rect(config.frame.x, config.frame.y, config.frame.width, config.frame.height);
+          }
+        }}
+      >
+        <KonvaImage
+          image={img}
+          x={config.frame.x}
+          y={config.frame.y}
+          width={config.frame.width}
+          height={config.frame.height}
+        />
+      </Group>
+    );
+  };
 
   return (
     <div className="flex justify-center border border-gray-200 shadow-lg rounded-lg overflow-hidden bg-white">
       <Stage
+        ref={ref} // CHANGED: Connected the Ref here
         width={CANVAS_SIZE * scale}
         height={CANVAS_SIZE * scale}
         scaleX={scale}
         scaleY={scale}
       >
         <Layer>
-            {/* 0. SOLID BACKGROUND (Safety Layer) */}
-            <Rect
-                x={0}
-                y={0}
-                width={CANVAS_SIZE}
-                height={CANVAS_SIZE}
-                fill="#ffffff"
-            />
-          {/* 1. USER PHOTO (Bottom Layer) */}
-          {userImageSrc && (
-            <URLImage
-              src={userImageSrc}
-              x={config.frame.x}
-              y={config.frame.y}
-              width={config.frame.width}
-              height={config.frame.height}
-            />
-          )}
-
-          {/* 2. BASE FLYER (Middle Layer) */}
-          {/* This sits ON TOP of the user photo, creating the "Frame" effect */}
+          <Rect x={0} y={0} width={CANVAS_SIZE} height={CANVAS_SIZE} fill="#ffffff" />
+          <UserPhotoLayer />
           <URLImage
             src={config.baseImageUrl}
             x={0}
             y={0}
             width={CANVAS_SIZE}
             height={CANVAS_SIZE}
-            opacity={0.5}
           />
-
-          {/* 3. USER NAME (Top Layer) */}
-          <Text
-            text={userName}
-            x={config.text.x}
-            y={config.text.y}
-            fontSize={config.text.fontSize}
-            fontFamily={config.text.fontFamily}
-            fill={config.text.color}
-            align={config.text.align}
-            width={CANVAS_SIZE} // Allow centering relative to full width
-          />
+          {config.text && userName && (
+            <Text
+              text={userName}
+              x={config.text.x}
+              y={config.text.y}
+              fontSize={config.text.fontSize}
+              fontFamily={config.text.fontFamily}
+              fill={config.text.color}
+              align={config.text.align}
+            />
+          )}
         </Layer>
       </Stage>
     </div>
   );
-};
+});

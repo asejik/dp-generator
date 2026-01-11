@@ -9,9 +9,16 @@ export const AdminBuilder = () => {
 
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [frameConfig, setFrameConfig] = useState({ x: 100, y: 100, width: 200, height: 200 });
 
-  // Form State
+  // New State: Name Toggle
+  const [includeName, setIncludeName] = useState(true);
+
+  // We only store the "Result" config here that comes from the canvas
+  const [finalConfig, setFinalConfig] = useState<{
+    frame: { x: number; y: number; width: number; height: number; shape: 'rect' | 'circle' };
+    text: { x: number; y: number } | null;
+  } | null>(null);
+
   const [title, setTitle] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
@@ -24,28 +31,23 @@ export const AdminBuilder = () => {
   };
 
   const handleSave = async () => {
-    if (!file || !title) return alert("Please enter a title and upload an image.");
+    if (!file || !title || !finalConfig) return alert("Please enter a title, upload an image, and configure the layout.");
 
-    // Simple Password Check
     const password = prompt("Enter Admin Password to confirm save:");
     if (password !== "1234") return alert("Wrong password!");
 
     try {
       setIsUploading(true);
 
-      // 1. Upload Image
       const imageUrl = await uploadCampaignImage(file);
 
-      // 2. Save Data
-      const campaignId = await createCampaign(title, imageUrl, frameConfig);
+      // Pass the data exactly as the Service expects it
+      // Note: The service will handle the null text check
+      await createCampaign(title, imageUrl, finalConfig);
 
-      alert("Campaign Created! ID: " + campaignId);
-
-      // 3. Reset or Redirect (For now, let's just log it)
-      console.log("Success:", campaignId);
+      alert("Campaign Created Successfully!");
       setIsUploading(false);
 
-      // Optional: Redirect to home to see it (we'll build the list view next)
       navigate('/');
 
     } catch (error) {
@@ -61,7 +63,7 @@ export const AdminBuilder = () => {
         <header className="mb-8 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Campaign Builder</h1>
-            <p className="text-gray-500">Upload a flyer and drag the box to define the photo area.</p>
+            <p className="text-gray-500">Upload a flyer, choose a shape, and position the text.</p>
           </div>
 
           {previewUrl && (
@@ -76,21 +78,33 @@ export const AdminBuilder = () => {
           )}
         </header>
 
-        {/* Title Input */}
         {previewUrl && (
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Campaign Title</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., Sunday Service Jan 12"
-              className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-            />
+          <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Campaign Title</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g., Sunday Service Jan 12"
+                className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div className="flex items-end pb-2">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={includeName}
+                  onChange={(e) => setIncludeName(e.target.checked)}
+                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                />
+                <span className="font-medium text-gray-700">Enable Name Input?</span>
+              </label>
+            </div>
           </div>
         )}
 
-        {/* Upload & Editor */}
         {!previewUrl ? (
           <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 flex flex-col items-center justify-center bg-white hover:border-blue-500 transition-colors cursor-pointer relative h-64">
             <input
@@ -108,7 +122,8 @@ export const AdminBuilder = () => {
           <div className="flex flex-col items-center gap-6">
             <AdminCanvas
               imageSrc={previewUrl}
-              onConfigChange={(newConfig) => setFrameConfig(newConfig)}
+              includeName={includeName}
+              onConfigChange={(newConfig) => setFinalConfig(newConfig)}
             />
           </div>
         )}
