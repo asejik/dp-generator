@@ -73,20 +73,13 @@ export const CampaignView = () => {
   const handleShare = async () => {
     if (!stageRef.current) return;
 
-    // Safety check: if navigator.share isn't real, alert user
-    if (!navigator.share || !navigator.canShare) {
-        alert("Sharing is not supported on this browser/device. Please use Download.");
+    if (!navigator.share) {
+        alert("Sharing is not supported on this browser. Please use Download.");
         return;
     }
 
     setIsGenerating(true);
     setActionType('share');
-
-    // Safety Timer: Stop spinning after 5 seconds if OS share sheet hangs
-    const safetyTimer = setTimeout(() => {
-        setIsGenerating(false);
-        setActionType(null);
-    }, 5000);
 
     try {
       const blob = await getCanvasBlob();
@@ -95,20 +88,29 @@ export const CampaignView = () => {
         const shareData = {
             files: [file],
             title: campaign?.title || 'My DP',
-            text: `Get your DP here!`
+            text: `Create your own here: ${window.location.href}`
         };
 
-        if (navigator.canShare(shareData)) {
+        // Try to share FILE first
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share(shareData);
         } else {
-            throw new Error("Device refused share data");
+            // Fallback: Share just the LINK if files fail
+            throw new Error("File sharing not supported");
         }
       }
     } catch (e) {
-      console.log("Share failed or cancelled", e);
-      // Don't alert if user just cancelled the share sheet
+      console.log("File share failed, attempting text share fallback...");
+      try {
+          await navigator.share({
+              title: campaign?.title || 'My DP',
+              text: `Check out this DP generator! Create yours here:`,
+              url: window.location.href
+          });
+      } catch (e2) {
+          console.log("Share completely failed/cancelled");
+      }
     } finally {
-      clearTimeout(safetyTimer);
       setIsGenerating(false);
       setActionType(null);
     }
@@ -150,15 +152,14 @@ export const CampaignView = () => {
             <p className="text-gray-500 text-sm mt-1">Customize and download your design</p>
           </div>
 
-          {/* FIX: Force Aspect Ratio on Mobile */}
-          <div className="mb-8 flex justify-center w-full aspect-square relative">
+          {/* FIX: Removed aspect-square, added flex to center content naturally */}
+          <div className="mb-8 flex justify-center w-full relative">
             <motion.div
               initial={{ rotateX: 10, opacity: 0 }}
               animate={{ rotateX: 0, opacity: 1 }}
               transition={{ duration: 0.7, type: "spring" }}
-              className="rounded-xl overflow-hidden shadow-2xl ring-4 ring-white/50 w-full h-full flex items-center justify-center bg-white"
+              className="rounded-xl overflow-hidden shadow-2xl ring-4 ring-white/50"
             >
-              {/* Note: DPCanvas will scale itself, but this container forces the bounds */}
               <DPCanvas ref={stageRef} config={campaign} userImageSrc={userImage || undefined} userName={userName} />
             </motion.div>
           </div>

@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useEffect, useState } from 'react';
 import { Stage, Layer, Image as KonvaImage, Text, Rect, Group } from 'react-konva';
 import useImage from 'use-image';
 import { type CampaignConfig } from '../types';
@@ -25,13 +25,24 @@ const URLImage = ({ src, x, y, width, height, opacity = 1 }: any) => {
 
 export const DPCanvas = forwardRef<any, DPCanvasProps>(({ config, userImageSrc, userName }, ref) => {
   const CANVAS_SIZE = 1080;
-  const scale = window.innerWidth < 500 ? 0.3 : 0.4;
+
+  // Responsive Logic: Fit to screen width minus padding, or max out at 450px (Card size)
+  const [stageWidth, setStageWidth] = useState(Math.min(window.innerWidth - 64, 450));
+
+  useEffect(() => {
+    const handleResize = () => {
+      setStageWidth(Math.min(window.innerWidth - 64, 450));
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const scale = stageWidth / CANVAS_SIZE;
 
   const UserPhotoLayer = () => {
     if (!userImageSrc) return null;
     const [img] = useImage(userImageSrc, 'anonymous');
 
-    // Logic Fix: Since image is pre-cropped, we fit it exactly to frame dimensions
     return (
       <Group
         clipFunc={(ctx) => {
@@ -55,7 +66,6 @@ export const DPCanvas = forwardRef<any, DPCanvasProps>(({ config, userImageSrc, 
           y={config.frame.y}
           width={config.frame.width}
           height={config.frame.height}
-          // The cropper ensures aspect ratio matches, so we can force dimensions here safely
         />
       </Group>
     );
@@ -65,8 +75,8 @@ export const DPCanvas = forwardRef<any, DPCanvasProps>(({ config, userImageSrc, 
     <div className="flex justify-center border border-gray-200 shadow-lg rounded-lg overflow-hidden bg-white">
       <Stage
         ref={ref}
-        width={CANVAS_SIZE * scale}
-        height={CANVAS_SIZE * scale}
+        width={stageWidth}
+        height={stageWidth} // Only initial, we override with scale
         scaleX={scale}
         scaleY={scale}
       >
