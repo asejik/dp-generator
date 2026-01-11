@@ -1,10 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { DPCanvas } from '../components/DPCanvas';
 import { type CampaignConfig } from '../types';
-import { Loader2, Download, Upload, Type, Share2, Info } from 'lucide-react';
+import { Loader2, Download, Upload, Type, Share2, Info, ArrowLeft, Image as ImageIcon } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { GlassCard } from '../components/ui/GlassCard';
+import { GlowButton } from '../components/ui/GlowButton';
 
 export const CampaignView = () => {
   const { id } = useParams();
@@ -12,7 +15,6 @@ export const CampaignView = () => {
   const [campaign, setCampaign] = useState<CampaignConfig | null>(null);
   const stageRef = useRef<any>(null);
 
-  // Generation States
   const [isGenerating, setIsGenerating] = useState(false);
   const [actionType, setActionType] = useState<'download' | 'share' | null>(null);
 
@@ -25,183 +27,174 @@ export const CampaignView = () => {
       try {
         const docRef = doc(db, "dp_campaigns", id);
         const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setCampaign({ id: docSnap.id, ...docSnap.data() } as CampaignConfig);
-        } else {
-          alert("Campaign not found!");
-        }
-      } catch (error) {
-        console.error("Error fetching campaign:", error);
-      } finally {
-        setLoading(false);
-      }
+        if (docSnap.exists()) setCampaign({ id: docSnap.id, ...docSnap.data() } as CampaignConfig);
+      } catch (error) { console.error(error); }
+      finally { setLoading(false); }
     };
     fetchCampaign();
   }, [id]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setUserImage(URL.createObjectURL(file));
-    }
+    if (file) setUserImage(URL.createObjectURL(file));
   };
 
-  // Helper to get Blob from Canvas
   const getCanvasBlob = async (): Promise<Blob | null> => {
     if (!stageRef.current) return null;
-    return new Promise((resolve) => {
-      stageRef.current.toBlob((blob: Blob) => {
-        resolve(blob);
-      }, 'image/png', 1); // 1 = High Quality
-    });
+    return new Promise((resolve) => stageRef.current.toBlob((blob: Blob) => resolve(blob), 'image/png', 1));
   };
 
   const handleDownload = async () => {
     if (!stageRef.current) return;
-    setIsGenerating(true);
-    setActionType('download');
-
-    // Small delay to allow UI to show spinner before heavy canvas work
+    setIsGenerating(true); setActionType('download');
     setTimeout(async () => {
       const uri = stageRef.current.toDataURL({ pixelRatio: 3 });
       const link = document.createElement('a');
       link.download = `my-dp-${Date.now()}.png`;
       link.href = uri;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      setIsGenerating(false);
-      setActionType(null);
+      document.body.appendChild(link); link.click(); document.body.removeChild(link);
+      setIsGenerating(false); setActionType(null);
     }, 100);
   };
 
   const handleShare = async () => {
-    if (!stageRef.current) return;
-
-    // Check if sharing is supported
-    if (!navigator.share) {
-      alert("Sharing is not supported on this browser. Please use Download.");
-      return;
-    }
-
-    setIsGenerating(true);
-    setActionType('share');
-
+    if (!stageRef.current || !navigator.share) return;
+    setIsGenerating(true); setActionType('share');
     try {
       const blob = await getCanvasBlob();
       if (blob) {
-        const file = new File([blob], "my-dp.png", { type: "image/png" });
         await navigator.share({
-          files: [file],
-          title: campaign?.title || 'My New DP',
-          text: `Got my DP for ${campaign?.title}!`,
+          files: [new File([blob], "dp.png", { type: "image/png" })],
+          title: campaign?.title, text: `My ${campaign?.title} DP`
         });
       }
-    } catch (error) {
-      console.log("Share cancelled or failed", error);
-    } finally {
-      setIsGenerating(false);
-      setActionType(null);
-    }
+    } catch (e) { console.log(e); }
+    finally { setIsGenerating(false); setActionType(null); }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
-  if (!campaign) return <div className="text-center mt-20">Campaign not found.</div>;
+  if (loading) return <div className="min-h-screen aurora-bg flex items-center justify-center"><Loader2 className="animate-spin text-gray-600" /></div>;
+  if (!campaign) return <div className="min-h-screen aurora-bg flex items-center justify-center text-gray-500">Campaign not found.</div>;
 
   const isDownloadDisabled = !userImage || (!!campaign.text && !userName) || isGenerating;
   const showShare = typeof navigator !== 'undefined' && !!navigator.share && /mobile/i.test(navigator.userAgent);
 
   return (
-    <div className="min-h-screen bg-gray-100 py-10 px-4">
-      <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6">
-        <h1 className="text-2xl font-bold text-center text-gray-800 mb-2">{campaign.title}</h1>
-        <p className="text-center text-gray-500 mb-6 text-sm">Create your personalized DP</p>
+    <div className="min-h-screen aurora-bg py-8 px-4 flex flex-col items-center">
 
-        {/* Canvas Area */}
-        <div className="mb-2 flex justify-center">
-          <DPCanvas
-            ref={stageRef}
-            config={campaign}
-            userImageSrc={userImage || undefined}
-            userName={userName}
-          />
-        </div>
+      {/* Navbar / Back */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-lg mb-6 flex items-center justify-between"
+      >
+        <Link to="/" className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition bg-white/40 px-3 py-1.5 rounded-full backdrop-blur-sm">
+          <ArrowLeft size={16} /> Back to Gallery
+        </Link>
+      </motion.div>
 
-        {/* Mobile Polish: Instruction Hint */}
-        {userImage && (
-            <div className="flex items-center justify-center gap-2 text-xs text-blue-600 bg-blue-50 py-2 rounded mb-6">
-                <Info size={14} />
-                <span>Tip: Pinch to zoom or drag to adjust your photo</span>
-            </div>
-        )}
+      {/* Main Glass Card */}
+      <GlassCard className="w-full max-w-lg overflow-hidden relative">
+        {/* Subtle decorative gradient glow behind content */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-blue-400/20 blur-3xl -z-10" />
 
-        <div className="space-y-4">
-
-          {campaign.text && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
-              <div className="relative">
-                <Type className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  placeholder="Enter your name"
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Your Photo</label>
-            <label className="flex items-center justify-center w-full px-4 py-3 border border-gray-300 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 bg-gray-50 transition-colors">
-              <Upload className="w-5 h-5 text-gray-500 mr-2" />
-              <span className="text-sm text-gray-600">
-                {userImage ? "Change Photo" : "Upload Selfie"}
-              </span>
-              <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
-            </label>
+        <div className="p-8">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-display font-bold text-gray-900">{campaign.title}</h1>
+            <p className="text-gray-500 text-sm mt-1">Customize and download your design</p>
           </div>
 
-          <div className="flex gap-3">
-             {/* Download Button */}
-            <button
+          {/* Canvas Wrapper */}
+          <div className="mb-8 flex justify-center perspective-1000">
+            <motion.div
+              initial={{ rotateX: 10, opacity: 0 }}
+              animate={{ rotateX: 0, opacity: 1 }}
+              transition={{ duration: 0.7, type: "spring" }}
+              className="rounded-xl overflow-hidden shadow-2xl ring-4 ring-white/50"
+            >
+              <DPCanvas
+                ref={stageRef}
+                config={campaign}
+                userImageSrc={userImage || undefined}
+                userName={userName}
+              />
+            </motion.div>
+          </div>
+
+          {/* Controls */}
+          <div className="space-y-5">
+            {campaign.text && (
+              <div className="group">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block ml-1">Your Name</label>
+                <div className="relative overflow-hidden rounded-xl bg-gray-50/50 border border-gray-200 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all duration-300">
+                  <div className="absolute left-4 top-3.5 text-gray-400">
+                    <Type size={18} />
+                  </div>
+                  <input
+                    type="text"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="w-full pl-11 pr-4 py-3 bg-transparent outline-none text-gray-900 font-medium placeholder:text-gray-400"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="group">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block ml-1">Your Photo</label>
+              <label className="relative flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-blue-50/30 transition-all duration-300 group-hover:scale-[1.01]">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  {userImage ? (
+                    <div className="flex items-center gap-2 text-green-600 font-medium">
+                      <ImageIcon size={20} />
+                      <span>Photo Selected</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="w-6 h-6 text-gray-400 mb-2 group-hover:text-blue-500 transition-colors" />
+                      <p className="text-sm text-gray-500">Click to upload selfie</p>
+                    </>
+                  )}
+                </div>
+                <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+              </label>
+            </div>
+
+            {userImage && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="flex justify-center">
+                 <div className="inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wide text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                    <Info size={12} /> Pinch to zoom & drag
+                 </div>
+              </motion.div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <GlowButton
                 onClick={handleDownload}
                 disabled={isDownloadDisabled}
-                className="flex-1 flex items-center justify-center bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                {isGenerating && actionType === 'download' ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                    <>
-                        <Download className="w-5 h-5 mr-2" />
-                        Download
-                    </>
-                )}
-            </button>
+                isLoading={isGenerating && actionType === 'download'}
+                icon={<Download size={18} />}
+                className="flex-1"
+              >
+                Download
+              </GlowButton>
 
-            {/* Share Button (Only shows on supported devices/browsers) */}
-            {showShare && (
-                <button
-                    onClick={handleShare}
-                    disabled={isDownloadDisabled}
-                    className="flex-1 flex items-center justify-center bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              {showShare && (
+                <GlowButton
+                  onClick={handleShare}
+                  disabled={isDownloadDisabled}
+                  variant="secondary"
+                  isLoading={isGenerating && actionType === 'share'}
+                  icon={<Share2 size={18} />}
+                  className="flex-1"
                 >
-                    {isGenerating && actionType === 'share' ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                        <>
-                            <Share2 className="w-5 h-5 mr-2" />
-                            Share
-                        </>
-                    )}
-                </button>
-            )}
+                  Share
+                </GlowButton>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </GlassCard>
     </div>
   );
 };

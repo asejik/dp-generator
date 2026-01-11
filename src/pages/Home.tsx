@@ -2,9 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Trash2, Sparkles, ArrowRight } from 'lucide-react';
 import { type CampaignConfig } from '../types';
 import { deleteCampaign } from '../lib/campaignService';
+import { motion, AnimatePresence } from 'framer-motion';
+import { GlassCard } from '../components/ui/GlassCard';
+import { GlowButton } from '../components/ui/GlowButton';
 
 export const Home = () => {
   const [campaigns, setCampaigns] = useState<CampaignConfig[]>([]);
@@ -18,12 +21,8 @@ export const Home = () => {
     try {
       const q = query(collection(db, "dp_campaigns"), orderBy("createdAt", "desc"), limit(20));
       const querySnapshot = await getDocs(q);
-
       const list: CampaignConfig[] = [];
-      querySnapshot.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() } as CampaignConfig);
-      });
-
+      querySnapshot.forEach((doc) => list.push({ id: doc.id, ...doc.data() } as CampaignConfig));
       setCampaigns(list);
     } catch (error) {
       console.error("Error fetching campaigns:", error);
@@ -33,81 +32,100 @@ export const Home = () => {
   };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
-    e.preventDefault(); // Prevent clicking the link
-    if (!window.confirm("Are you sure you want to delete this campaign?")) return;
-
-    const password = prompt("Enter Admin Password to confirm delete:");
+    e.preventDefault();
+    if (!window.confirm("Are you sure?")) return;
+    const password = prompt("Admin Password:");
     if (password !== "1234") return alert("Wrong password!");
-
     try {
       await deleteCampaign(id);
-      // Remove from UI instantly
       setCampaigns(prev => prev.filter(c => c.id !== id));
     } catch (error) {
-      alert("Error deleting campaign");
+      alert("Error deleting");
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" /></div>;
+  if (loading) return <div className="min-h-screen aurora-bg flex items-center justify-center"><Loader2 className="animate-spin text-gray-600" /></div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen aurora-bg text-gray-900 pb-20">
 
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Available DP Frames</h1>
-            <p className="text-gray-500 mt-1">Select a campaign to create your DP.</p>
+      {/* 1. Hero Section (Big Contrast) */}
+      <div className="relative pt-20 pb-16 px-6 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/50 border border-white/60 backdrop-blur-md text-xs font-semibold text-blue-600 mb-6 shadow-sm">
+            <Sparkles size={12} />
+            <span>Official DP Generator</span>
           </div>
-          <Link
-            to="/admin"
-            className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition"
-          >
-            <Plus size={16} />
-            New Campaign
+          <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight text-gray-900 mb-6">
+            Create Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600">Moment.</span>
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-10 leading-relaxed">
+            Select a campaign below to generate your personalized design instantly. High quality, ready for social sharing.
+          </p>
+
+          <Link to="/admin">
+            <GlowButton variant="secondary" icon={<Plus size={16} />}>
+              Admin Dashboard
+            </GlowButton>
           </Link>
-        </div>
+        </motion.div>
+      </div>
 
-        {/* Grid */}
+      {/* 2. Grid with Staggered Reveal */}
+      <div className="max-w-6xl mx-auto px-6">
         {campaigns.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-200">
-            <p className="text-gray-400 mb-4">No active campaigns found.</p>
-            <Link to="/admin" className="text-blue-600 font-medium hover:underline">Create the first one</Link>
-          </div>
+           <GlassCard className="p-12 text-center">
+              <p className="text-gray-400">No active campaigns.</p>
+           </GlassCard>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {campaigns.map((campaign) => (
-              <Link
-                key={campaign.id}
-                to={`/c/${campaign.id}`}
-                className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition hover:border-blue-300 block relative"
-              >
-                {/* Delete Button (Absolute Position) */}
-                <button
-                  onClick={(e) => handleDelete(e, campaign.id)}
-                  className="absolute top-2 right-2 z-10 p-2 bg-white/90 text-red-600 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
-                  title="Delete Campaign"
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            <AnimatePresence>
+              {campaigns.map((campaign, index) => (
+                <motion.div
+                  key={campaign.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ y: -8 }} // Card Lift
                 >
-                  <Trash2 size={16} />
-                </button>
+                  <Link to={`/c/${campaign.id}`} className="block group relative">
+                    <GlassCard className="overflow-hidden h-full border-0 ring-1 ring-gray-900/5 transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-blue-900/20">
 
-                {/* Image Preview */}
-                <div className="aspect-video w-full overflow-hidden bg-gray-100 relative">
-                  <img
-                    src={campaign.baseImageUrl}
-                    alt={campaign.title}
-                    className="w-full h-full object-cover object-top group-hover:scale-105 transition duration-300"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition" />
-                </div>
+                      {/* Delete Trigger */}
+                      <button
+                        onClick={(e) => handleDelete(e, campaign.id)}
+                        className="absolute top-3 right-3 z-20 p-2 bg-white/80 backdrop-blur rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 scale-90 group-hover:scale-100"
+                      >
+                        <Trash2 size={16} />
+                      </button>
 
-                <div className="p-4">
-                  <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition truncate">{campaign.title}</h3>
-                  <p className="text-xs text-gray-400 mt-1">Tap to generate &rarr;</p>
-                </div>
-              </Link>
-            ))}
+                      {/* Image */}
+                      <div className="aspect-[4/3] w-full overflow-hidden bg-gray-100 relative">
+                        <img
+                          src={campaign.baseImageUrl}
+                          alt={campaign.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-700 ease-out"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
+
+                        {/* Title Overlay */}
+                        <div className="absolute bottom-0 left-0 p-6 text-white">
+                          <h3 className="text-xl font-display font-bold leading-tight mb-1">{campaign.title}</h3>
+                          <div className="flex items-center gap-2 text-sm font-medium text-white/80 opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                            Generate yours <ArrowRight size={14} />
+                          </div>
+                        </div>
+                      </div>
+                    </GlassCard>
+                  </Link>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </div>
