@@ -1,5 +1,5 @@
 import { db, storage } from "./firebase";
-import { collection, addDoc, serverTimestamp, deleteDoc, doc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // 1. Upload the Flyer Image to Storage
@@ -47,4 +47,43 @@ export const createCampaign = async (
 
 export const deleteCampaign = async (id: string): Promise<void> => {
   await deleteDoc(doc(db, "dp_campaigns", id));
+};
+
+export const updateCampaign = async (
+  id: string,
+  title: string,
+  imageUrl: string | null, // If null, keep the old image
+  config: {
+    frame: any,
+    text: { x: number; y: number } | null
+  }
+): Promise<void> => {
+
+  const docRef = doc(db, "dp_campaigns", id);
+
+  const updateData: any = {
+    title: title,
+    frame: config.frame,
+    // Handle optional text update
+    ...(config.text ? {
+      text: {
+        x: config.text.x,
+        y: config.text.y,
+        color: "#000000",
+        fontSize: 60,
+        fontFamily: "Arial",
+        align: "center"
+      }
+    } : {
+      text: null // Explicitly remove text if disabled
+    }),
+    updatedAt: serverTimestamp()
+  };
+
+  // Only update image URL if a new one was uploaded
+  if (imageUrl) {
+    updateData.baseImageUrl = imageUrl;
+  }
+
+  await updateDoc(docRef, updateData);
 };
