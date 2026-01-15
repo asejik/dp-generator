@@ -331,6 +331,11 @@ export const AdminBuilder = () => {
                         <AdminCanvas
                             imageSrc={previewUrl}
                             includeName={includeName}
+                            // NEW: Pass the initial data if we are editing
+                            initialConfig={editingId ? {
+                                frame: campaigns.find(c => c.id === editingId)?.frame!,
+                                text: campaigns.find(c => c.id === editingId)?.text || null
+                            } : undefined}
                             onConfigChange={(newConfig) => setFinalConfig(newConfig)}
                         />
                     </div>

@@ -5,30 +5,42 @@ import useImage from 'use-image';
 interface AdminCanvasProps {
   imageSrc: string;
   includeName: boolean;
+  // NEW: Accept existing data for editing
+  initialConfig?: {
+    frame: { x: number; y: number; width: number; height: number; shape: 'rect' | 'circle' };
+    text: { x: number; y: number } | null;
+  };
   onConfigChange: (config: {
     frame: { x: number; y: number; width: number; height: number; shape: 'rect' | 'circle' };
     text: { x: number; y: number } | null
   }) => void;
 }
 
-export const AdminCanvas: React.FC<AdminCanvasProps> = ({ imageSrc, includeName, onConfigChange }) => {
+export const AdminCanvas: React.FC<AdminCanvasProps> = ({ imageSrc, includeName, initialConfig, onConfigChange }) => {
   const [image] = useImage(imageSrc, 'anonymous');
   const transformerRef = useRef<any>(null);
   const frameRef = useRef<any>(null);
   const textRef = useRef<any>(null);
-
-  // Selection State
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // Initialize State with InitialConfig (if editing) or Defaults (if new)
   const [frameProps, setFrameProps] = useState({
     x: 100, y: 100, width: 200, height: 200, shape: 'rect' as 'rect' | 'circle'
   });
 
-  const [textProps, setTextProps] = useState({
-    x: 100, y: 400
-  });
+  const [textProps, setTextProps] = useState({ x: 100, y: 400 });
 
-  // 1. Update Parent whenever data changes
+  // Load initial data when component mounts (ONLY ONCE)
+  useEffect(() => {
+    if (initialConfig) {
+      setFrameProps(initialConfig.frame);
+      if (initialConfig.text) {
+        setTextProps(initialConfig.text);
+      }
+    }
+  }, [initialConfig]);
+
+  // Sync with Parent
   useEffect(() => {
     onConfigChange({
       frame: frameProps,
@@ -36,10 +48,9 @@ export const AdminCanvas: React.FC<AdminCanvasProps> = ({ imageSrc, includeName,
     });
   }, [frameProps, textProps, includeName, onConfigChange]);
 
-  // 2. CRITICAL FIX: Re-attach transformer whenever selection changes
+  // Re-attach transformer on selection
   useEffect(() => {
     if (selectedId && transformerRef.current) {
-      // Find the node based on ID
       const node = selectedId === 'frame' ? frameRef.current : textRef.current;
       if (node) {
         transformerRef.current.nodes([node]);
@@ -59,14 +70,10 @@ export const AdminCanvas: React.FC<AdminCanvasProps> = ({ imageSrc, includeName,
   const handleTransformEnd = () => {
     const node = frameRef.current;
     if (!node) return;
-
     const scaleX = node.scaleX();
     const scaleY = node.scaleY();
-
-    // Reset scale to 1 so the stroke width doesn't get distorted
     node.scaleX(1);
     node.scaleY(1);
-
     setFrameProps({
       ...frameProps,
       x: Math.round(node.x()),
@@ -76,7 +83,7 @@ export const AdminCanvas: React.FC<AdminCanvasProps> = ({ imageSrc, includeName,
     });
   };
 
-  if (!image) return <div>Loading Canvas...</div>;
+  if (!image) return <div className="text-white">Loading Canvas...</div>;
 
   const displayWidth = 500;
   const scaleFactor = displayWidth / image.width;
@@ -84,7 +91,6 @@ export const AdminCanvas: React.FC<AdminCanvasProps> = ({ imageSrc, includeName,
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Toolbar */}
       <div className="flex gap-2 bg-gray-100 p-2 rounded border border-gray-300">
         <span className="text-sm font-bold self-center mr-2">Shape:</span>
         <button
@@ -116,8 +122,6 @@ export const AdminCanvas: React.FC<AdminCanvasProps> = ({ imageSrc, includeName,
         >
           <Layer>
             <KonvaImage image={image} opacity={0.8} listening={false} />
-
-            {/* FRAME */}
             <Group
               ref={frameRef}
               {...frameProps}
@@ -138,8 +142,6 @@ export const AdminCanvas: React.FC<AdminCanvasProps> = ({ imageSrc, includeName,
                  />
                )}
             </Group>
-
-            {/* TEXT (Conditional) */}
             {includeName && (
               <Text
                 ref={textRef}
@@ -155,7 +157,6 @@ export const AdminCanvas: React.FC<AdminCanvasProps> = ({ imageSrc, includeName,
                 onDragEnd={(e) => handleDragEnd(e, 'text')}
               />
             )}
-
             <Transformer
               ref={transformerRef}
               boundBoxFunc={(oldBox, newBox) => {
