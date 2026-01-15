@@ -26,7 +26,7 @@ const URLImage = ({ src, x, y, width, height, opacity = 1 }: any) => {
 export const DPCanvas = forwardRef<any, DPCanvasProps>(({ config, userImageSrc, userName }, ref) => {
   const CANVAS_SIZE = 1080;
 
-  // Responsive Logic: Fit to screen width minus padding, or max out at 450px (Card size)
+  // Responsive Logic
   const [stageWidth, setStageWidth] = useState(Math.min(window.innerWidth - 64, 450));
 
   useEffect(() => {
@@ -76,13 +76,19 @@ export const DPCanvas = forwardRef<any, DPCanvasProps>(({ config, userImageSrc, 
       <Stage
         ref={ref}
         width={stageWidth}
-        height={stageWidth} // Only initial, we override with scale
+        height={stageWidth}
         scaleX={scale}
         scaleY={scale}
       >
         <Layer>
+          {/* 1. White Background */}
           <Rect x={0} y={0} width={CANVAS_SIZE} height={CANVAS_SIZE} fill="#ffffff" />
+
+          {/* 2. User Photo (BEHIND) */}
           <UserPhotoLayer />
+
+          {/* 3. The Flyer Design (ON TOP) */}
+          {/* CRITICAL: This image MUST have transparency for the user photo to show! */}
           <URLImage
             src={config.baseImageUrl}
             x={0}
@@ -90,6 +96,7 @@ export const DPCanvas = forwardRef<any, DPCanvasProps>(({ config, userImageSrc, 
             width={CANVAS_SIZE}
             height={CANVAS_SIZE}
           />
+
           {config.text && userName && (
             <Text
               text={userName}

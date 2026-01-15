@@ -1,12 +1,12 @@
 import React, { useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Cropper from 'react-easy-crop';
 import { getCroppedImg } from '../lib/canvasUtils';
-import { GlowButton } from './ui/GlowButton';
-import { Check, X, ZoomIn } from 'lucide-react';
+import { Check, X, ZoomIn, Loader2 } from 'lucide-react';
 
 interface ImageCropperProps {
   imageSrc: string;
-  aspect: number; // Width / Height
+  aspect: number;
   shape: 'rect' | 'circle';
   onCropComplete: (croppedImgUrl: string) => void;
   onCancel: () => void;
@@ -42,26 +42,29 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/90 backdrop-blur-sm animate-in fade-in duration-200">
+  // The Portal ensures this renders directly in the document body, avoiding all CSS traps
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex flex-col bg-black/95 animate-in fade-in duration-200">
 
       {/* 1. Header */}
-      <div className="p-4 flex justify-between items-center text-white bg-black/40">
-        <h3 className="font-display font-bold">Adjust Photo</h3>
-        <button onClick={onCancel} className="p-2 hover:bg-white/10 rounded-full">
+      <div className="flex-none p-4 flex justify-between items-center text-white bg-gray-900 z-50">
+        <h3 className="font-bold text-lg">Adjust Photo</h3>
+        <button onClick={onCancel} className="p-2 bg-gray-800 rounded-full text-white hover:bg-gray-700">
           <X size={24} />
         </button>
       </div>
 
       {/* 2. Cropper Area */}
-      <div className="relative flex-1 bg-gray-900 overflow-hidden">
+      <div className="relative flex-1 w-full bg-black overflow-hidden">
         <Cropper
           image={imageSrc}
           crop={crop}
           zoom={zoom}
           aspect={aspect}
           cropShape={shape === 'circle' ? 'round' : 'rect'}
-          showGrid={false}
+          showGrid={true}
           onCropChange={onCropChange}
           onCropComplete={onCropCompleteCallback}
           onZoomChange={setZoom}
@@ -69,9 +72,7 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
       </div>
 
       {/* 3. Controls */}
-      <div className="p-6 bg-gray-900 border-t border-gray-800 space-y-6">
-
-        {/* Zoom Slider */}
+      <div className="flex-none p-6 bg-gray-900 border-t border-gray-800 space-y-6 pb-10 z-50">
         <div className="flex items-center gap-4">
           <ZoomIn size={20} className="text-gray-400" />
           <input
@@ -80,30 +81,30 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
             min={1}
             max={3}
             step={0.1}
-            aria-labelledby="Zoom"
             onChange={(e) => setZoom(Number(e.target.value))}
-            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
+            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
           />
         </div>
 
-        {/* Action Buttons */}
         <div className="flex gap-3">
           <button
             onClick={onCancel}
-            className="flex-1 py-3 rounded-xl border border-gray-600 text-gray-300 font-medium hover:bg-gray-800 transition"
+            className="flex-1 py-3 rounded-xl border border-gray-600 text-gray-300 font-medium hover:bg-gray-800"
           >
             Cancel
           </button>
-          <GlowButton
+
+          <button
             onClick={handleSave}
-            isLoading={loading}
-            icon={<Check size={18} />}
-            className="flex-1"
+            disabled={loading}
+            className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 flex items-center justify-center gap-2"
           >
-            Apply Photo
-          </GlowButton>
+             {loading ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />}
+             {loading ? "Apply Photo" : "Apply Photo"}
+          </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
